@@ -55,7 +55,7 @@ UGQ/
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/YOUR_USERNAME/UGQ.git
+    git clone https://github.com/amanm-sudo/UGQ.git
     cd UGQ
     ```
 
