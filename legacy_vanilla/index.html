@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI IoT Monitoring System</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i data-lucide="activity" class="brand-icon"></i>
+                <h1>IoT Monitoring System</h1>
+            </div>
+
+            <div class="nav-controls">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">System Online</span>
+                </div>
+
+                <div class="time-display" id="current-time">
+                    --:--:--
+                </div>
+
+                <div class="device-selector">
+                    <i data-lucide="cpu"></i>
+                    <select>
+                        <option value="esp32-001">ESP32-001</option>
+                        <option value="esp32-002">ESP32-002</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard-grid">
+            <!-- Section 1: Sensor Overview -->
+            <section class="sensor-overview" id="sensor-grid">
+                <!-- Sensor Cards injected by JS -->
+            </section>
+
+            <!-- Section 2: AI Insights -->
+            <section class="ai-insights-panel">
+                <div class="panel-header">
+                    <h2><i data-lucide="brain-circuit"></i> AI Insights</h2>
+                    <span class="badge ai-badge">AI POWERED</span>
+                </div>
+
+                <div class="ai-grid">
+                    <!-- Anomaly Detection -->
+                    <div class="ai-card anomaly-card" id="anomaly-panel">
+                        <h3>Anomaly Detection</h3>
+                        <div class="anomaly-score">
+                            <span class="score-value" id="anomaly-score">--</span>
+                            <span class="score-label">/ 100</span>
+                        </div>
+                        <div class="status-pill" id="anomaly-status">Analyzing...</div>
+                    </div>
+
+                    <!-- Predictions -->
+                    <div class="ai-card prediction-card">
+                        <h3>Temp Forecast</h3>
+                        <div class="forecast-value">
+                            <span id="temp-forecast">--</span>
+                            <small>next 5min</small>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="ai-card prediction-card">
+                        <h3>Energy Forecast</h3>
+                        <div class="forecast-value">
+                            <span id="energy-forecast">--</span>
+                            <small>next hr</small>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Predictive Charts -->
+            <section class="charts-section">
+                <!-- Main Sensor Chart -->
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>Sensor Readings</h3>
+                        <div class="legend">
+                            <span class="legend-item"><span class="dot actual"></span> Actual</span>
+                            <span class="legend-item"><span class="dot predicted"></span> Predicted</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Energy Chart -->
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>Energy Consumption</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="energyChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4 & 5: Alerts and History -->
+            <section class="bottom-panel">
+                <!-- Environmental Risk Index -->
+                <div class="risk-panel">
+                    <h3>Environmental Risk Index</h3>
+                    <div class="gauge-container" id="risk-gauge">
+                        <!-- CSS Gauge -->
+                        <div class="gauge-arch"></div>
+                        <div class="gauge-value">--</div>
+                    </div>
+                </div>
+
+                <!-- Alerts List -->
+                <div class="alerts-panel">
+                    <h3>Recent Alerts</h3>
+                    <ul class="alerts-list" id="alerts-list">
+                        <!-- Alerts injected here -->
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 5: Historical Data -->
+            <section class="history-section">
+                <div class="panel-header">
+                    <h3>Historical Data (Last 50 Records)</h3>
+                    <button class="btn-export" onclick="alert('Exporting CSV...')">Export CSV</button>
+                </div>
+                <div class="table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Temp (°C)</th>
+                                <th>Humidity (%)</th>
+                                <th>CO2 (ppm)</th>
+                                <th>Energy (kWh)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <!-- Rows injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
