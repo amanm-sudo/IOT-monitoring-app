@@ -43,7 +43,7 @@ app.get('/', (req, res) => {
 // Get Historical Data
 app.get('/api/sensors/history', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM sensor_readings ORDER BY created_at DESC LIMIT 50');
+        const result = await pool.query('SELECT * FROM sensor_readings ORDER BY timestamp DESC LIMIT 50');
         res.json(result.rows);
     } catch (err) {
         console.error(err);

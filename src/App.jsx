@@ -33,9 +33,9 @@ function App() {
         setData(latest);
       }
 
-      if (historyData && Array.isArray(historyData)) {
+      if (historyData && Array.isArray(historyData) && historyData.length > 0) {
         const formattedHistory = historyData.map(record => ({
-          time: new Date(record.created_at).toLocaleTimeString(),
+          time: new Date(record.timestamp).toLocaleTimeString(),
           temperature: { value: record.temperature, unit: '°C' },
           humidity: { value: record.humidity, unit: '%' },
           co2: { value: record.co2_ppm, unit: 'ppm' },
