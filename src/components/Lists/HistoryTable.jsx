@@ -2,6 +2,44 @@ import React from 'react';
 import { Database, Download } from 'lucide-react';
 
 export default function HistoryTable({ history }) {
+
+    const downloadCSV = () => {
+        if (!history || history.length === 0) {
+            alert("No data to export!");
+            return;
+        }
+
+        // 1. Define Headers
+        const headers = ["TIME", "TEMP (°C)", "HUMIDITY (%)", "CO2 (ppm)", "ENERGY (kWh)", "STATUS"];
+
+        // 2. Format Data Rows
+        const rows = history.map(row => [
+            row.time,
+            row.temperature.value,
+            row.humidity.value,
+            row.co2.value,
+            row.energy.value,
+            row.isAnomaly ? "ANOMALY" : "NORMAL"
+        ]);
+
+        // 3. Combine Headers and Rows
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.join(","))
+        ].join("\n");
+
+        // 4. Create Blob and Download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `sensor_history_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <section className="history-section glass-panel" style={{ padding: '1.5rem', marginTop: '1rem' }}>
             <div className="panel-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -10,7 +48,7 @@ export default function HistoryTable({ history }) {
                     HISTORICAL DATA (Last 50)
                 </h3>
                 <button className="btn-export"
-                    onClick={() => alert("Exporting CSV...")}
+                    onClick={downloadCSV}
                     style={{
                         background: 'rgba(255,255,255,0.05)',
                         border: '1px solid rgba(255,255,255,0.1)',

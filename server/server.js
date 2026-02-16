@@ -40,6 +40,17 @@ app.get('/', (req, res) => {
     res.send('UGQ AI IoT Backend is Running');
 });
 
+// Get Historical Data
+app.get('/api/sensors/history', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM sensor_readings ORDER BY created_at DESC LIMIT 50');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Sensor Data Ingestion Endpoint (for ESP32)
 app.post('/api/sensors/readings', async (req, res) => {
     const { device_id, temperature, humidity, co2_ppm, energy_kwh } = req.body;

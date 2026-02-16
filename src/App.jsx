@@ -22,22 +22,36 @@ function App() {
 
   const updateDashboard = async () => {
     try {
-      const [latest, preds, anoms] = await Promise.all([
+      const [latest, historyData, preds, anoms] = await Promise.all([
         APIService.getLatestData(),
+        APIService.getHistory(),
         APIService.getPredictions(),
         APIService.getAnomalies()
       ]);
 
       if (latest) {
         setData(latest);
-        // Initial History Entry
+      }
+
+      if (historyData && Array.isArray(historyData)) {
+        const formattedHistory = historyData.map(record => ({
+          time: new Date(record.created_at).toLocaleTimeString(),
+          temperature: { value: record.temperature, unit: '°C' },
+          humidity: { value: record.humidity, unit: '%' },
+          co2: { value: record.co2_ppm, unit: 'ppm' },
+          energy: { value: record.energy_kwh, unit: 'kWh' },
+          isAnomaly: false // Default to false for historical data
+        }));
+        setHistory(formattedHistory);
+      } else if (latest) {
+        // Fallback if no history (fresh DB)
         const now = new Date().toLocaleTimeString();
         const newRecord = {
           time: now,
           ...latest,
           isAnomaly: anoms.detected
         };
-        setHistory(prev => [newRecord, ...prev].slice(0, 50));
+        setHistory([newRecord]);
       }
 
       setPredictions(preds);

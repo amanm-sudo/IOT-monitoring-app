@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h> // HTTPS Support
 #include <ArduinoJson.h>
 #include "DHT.h"
 #include <ModbusMaster.h>
@@ -12,8 +13,8 @@
 const char* ssid = "Aman";
 const char* password = "Hanumana.";
 
-// Backend Server URL
-const char* serverUrl = "http://10.177.108.117:5000/api/sensors/readings";
+// Backend Server URL (Render HTTPS)
+const char* serverUrl = "https://iot-monitoring-app-5xoi.onrender.com/api/sensors/readings";
 
 // Device ID
 const char* deviceId = "ESP32_MAIN_01";
@@ -50,10 +51,7 @@ void setup() {
   // IMPORTANT: Set timeout to 200ms (Default is 2000ms)
   // If no reply in 200ms, give up. This prevents WDT crash.
   node.begin(1, Serial2); 
-  // node.setTimeOut(200); // Check if your library version supports this. If not, edit ModbusMaster.h manually.
-  // Assuming standard library behavior:
-  // If setTimeOut() is not available, proceed, but the short loop logic below handles fail-fast.
-
+  
   // Other Sensors
   dht.begin();
   pinMode(MQPIN, INPUT);
@@ -169,35 +167,52 @@ void loop() {
 
   // 3. Send to Backend
   if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
+    WiFiClientSecure *client = new WiFiClientSecure;
+    if(client) {
+      // Key Part: Set Insecure to skip certificate validation (easiest for IoT)
+      client->setInsecure(); 
 
-    StaticJsonDocument<200> doc;
-    doc["device_id"] = deviceId;
-    doc["temperature"] = t;
-    doc["humidity"] = h;
-    doc["co2_ppm"] = co2_ppm;
-    doc["energy_kwh"] = energy_kwh; 
+      HTTPClient http;
+      
+      // Use the secure client
+      if (http.begin(*client, serverUrl)) {
+        http.addHeader("Content-Type", "application/json");
 
-    String jsonOutput;
-    serializeJson(doc, jsonOutput);
+        StaticJsonDocument<200> doc;
+        doc["device_id"] = deviceId;
+        doc["temperature"] = t;
+        doc["humidity"] = h;
+        doc["co2_ppm"] = co2_ppm;
+        doc["energy_kwh"] = energy_kwh; 
 
-    // IMPORTANT: Set timeout to prevent WDT crash if Firewall blocks connection
-    http.setConnectTimeout(2000); // 2 seconds to connect
-    http.setTimeout(2000);        // 2 seconds to receive response
+        String jsonOutput;
+        serializeJson(doc, jsonOutput);
 
-    Serial.println("Sending to Backend...");
-    int httpCode = http.POST(jsonOutput);
-    if (httpCode > 0) {
-      Serial.print("✓ Data Sent! HTTP Code: ");
-      Serial.println(httpCode);
+        // IMPORTANT: Set timeout to prevent WDT crash if Firewall blocks connection
+        http.setConnectTimeout(5000); // 5 seconds to connect
+        http.setTimeout(5000);        // 5 seconds to receive response
+
+        Serial.println("Sending to Cloud Backend (Render)...");
+        int httpCode = http.POST(jsonOutput);
+        
+        if (httpCode > 0) {
+          Serial.print("✓ Data Sent! HTTP Code: ");
+          Serial.println(httpCode);
+        } else {
+          Serial.print("✗ Error Sending Data. HTTP Code: ");
+          Serial.println(httpCode);
+          Serial.print("Error: ");
+          Serial.println(http.errorToString(httpCode).c_str());
+        }
+        
+        http.end();
+      } else {
+         Serial.println("✗ Could not connect to Server URL");
+      }
+      delete client;
     } else {
-      Serial.print("✗ Error Sending Data. HTTP Code: ");
-      Serial.println(httpCode);
+      Serial.println("✗ Unable to create secure client");
     }
-    
-    http.end();
   }
 
   Serial.println("Waiting...");
