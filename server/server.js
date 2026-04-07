@@ -23,7 +23,7 @@ const pool = new Pool({
 // Socket.io Setup
 const io = new Server(server, {
     cors: {
-        origin: "*", // Allow all origins for now (dev mode)
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
@@ -35,12 +35,19 @@ io.on('connection', (socket) => {
     });
 });
 
+// ============================================
 // API Routes
+// ============================================
+
 app.get('/', (req, res) => {
-    res.send('UGQ AI IoT Backend is Running');
+    res.send('UGQ AI IoT Backend is Running — Energy + AQI');
 });
 
-// Get Historical Data
+// ============================================
+// ENERGY METER ENDPOINTS (existing)
+// ============================================
+
+// Get Historical Energy Data
 app.get('/api/sensors/history', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM sensor_readings ORDER BY timestamp DESC LIMIT 50');
@@ -51,21 +58,19 @@ app.get('/api/sensors/history', async (req, res) => {
     }
 });
 
-// Sensor Data Ingestion Endpoint (for ESP32)
+// Energy Sensor Data Ingestion (for ESP32 Energy Meter)
 app.post('/api/sensors/readings', async (req, res) => {
-    const { device_id, temperature, humidity, co2_ppm, energy_kwh } = req.body;
+    const { device_id, temperature, humidity, co2_ppm, energy_kwh, voltage, current } = req.body;
 
-    console.log('Received data:', req.body);
+    console.log('Energy reading received:', req.body);
 
     try {
-        // Save to DB
         const query = `
-            INSERT INTO sensor_readings (device_id, temperature, humidity, co2_ppm, energy_kwh)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO sensor_readings (device_id, temperature, humidity, co2_ppm, energy_kwh, voltage, current)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *;
         `;
-        const result = await pool.query(query, [device_id, temperature, humidity, co2_ppm, energy_kwh]);
-
+        const result = await pool.query(query, [device_id, temperature, humidity, co2_ppm, energy_kwh, voltage || 0, current || 0]);
 
         // Emit to Frontend via WebSocket
         io.emit('new_reading', {
@@ -74,10 +79,106 @@ app.post('/api/sensors/readings', async (req, res) => {
             humidity,
             co2_ppm,
             energy_kwh,
+            voltage,
+            current,
             timestamp: new Date()
         });
 
-        res.status(201).json({ message: 'Data received', data: req.body });
+        res.status(201).json({ message: 'Energy data received', data: req.body });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// ============================================
+// AQI ENDPOINTS (new)
+// ============================================
+
+// AQI Data Ingestion (for Indoor/Outdoor ESP32s)
+app.post('/api/sensors/aqi', async (req, res) => {
+    const {
+        device_id, location,
+        pm1_0, pm2_5, pm4_0, pm10,
+        co2, tvoc, voc_index, nox_index,
+        temperature, humidity,
+        aqi_pm25, aqi_pm10, aqi_co2, aqi_tvoc,
+        final_aqi, window_status
+    } = req.body;
+
+    console.log(`AQI reading [${location}]:`, req.body);
+
+    try {
+        const query = `
+            INSERT INTO aqi_readings (
+                device_id, location,
+                pm1_0, pm2_5, pm4_0, pm10,
+                co2, tvoc, voc_index, nox_index,
+                temperature, humidity,
+                aqi_pm25, aqi_pm10, aqi_co2, aqi_tvoc,
+                final_aqi, window_status
+            )
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+            RETURNING *;
+        `;
+        await pool.query(query, [
+            device_id, location || 'unknown',
+            pm1_0, pm2_5, pm4_0, pm10,
+            co2, tvoc, voc_index, nox_index,
+            temperature, humidity,
+            aqi_pm25, aqi_pm10, aqi_co2, aqi_tvoc,
+            final_aqi, window_status || 'closed'
+        ]);
+
+        // Emit to Frontend via WebSocket
+        io.emit('new_aqi_reading', {
+            device_id, location,
+            pm1_0, pm2_5, pm4_0, pm10,
+            co2, tvoc, voc_index, nox_index,
+            temperature, humidity,
+            aqi_pm25, aqi_pm10, aqi_co2, aqi_tvoc,
+            final_aqi, window_status,
+            timestamp: new Date()
+        });
+
+        res.status(201).json({ message: 'AQI data received', data: req.body });
+    } catch (err) {
+        console.error('AQI insert error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get Latest AQI (one per location)
+app.get('/api/sensors/aqi/latest', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT DISTINCT ON (location) *
+            FROM aqi_readings
+            ORDER BY location, timestamp DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get AQI History (filterable by location)
+app.get('/api/sensors/aqi/history', async (req, res) => {
+    try {
+        const { location } = req.query;
+        let query = 'SELECT * FROM aqi_readings';
+        const params = [];
+
+        if (location) {
+            query += ' WHERE location = $1';
+            params.push(location);
+        }
+
+        query += ' ORDER BY timestamp DESC LIMIT 100';
+
+        const result = await pool.query(query, params);
+        res.json(result.rows);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
@@ -85,10 +186,9 @@ app.post('/api/sensors/readings', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-const HOST = '0.0.0.0'; // Listen on all network interfaces (not just localhost)
+const HOST = '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
     console.log(`Server running on ${HOST}:${PORT}`);
     console.log(`Access from laptop: http://localhost:${PORT}`);
-    console.log(`Access from ESP32: http://10.10.16.194:${PORT}`);
 });

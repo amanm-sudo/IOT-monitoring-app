@@ -1,7 +1,7 @@
-# RS485 Wiring Guide (ESP32 WROVER-E)
+# RS485 Wiring Guide (ESP32 DevKit V1)
 
-You are using an **ESP32 WROVER** module, which uses pins 16 & 17 internally for PSRAM. 
-We have remapped the Serial2 communication to **GPIO 26 and 27**.
+ESP32 DevKit V1 uses the standard Serial2 mapping.
+We are using Serial2 communication on **GPIO 16 and 17**.
 
 ## Wiring Connections
 
@@ -10,12 +10,12 @@ We have remapped the Serial2 communication to **GPIO 26 and 27**.
 | :--- | :--- |
 | **VCC** | 3.3V or 5V (Check module spec) |
 | **GND** | GND |
-| **RXD** | **GPIO 26** (New RX2) |
-| **TXD** | **GPIO 27** (New TX2) |
+| **RXD** | **GPIO 16** (RX2) |
+| **TXD** | **GPIO 17** (TX2) |
 
 > **Note:**
-> - **RXD** on module goes to **GPIO 26**.
-> - **TXD** on module goes to **GPIO 27**.
+> - **RXD** on module goes to **GPIO 16**.
+> - **TXD** on module goes to **GPIO 17**.
 > - Sometimes labels are swapped (RX->TX, TX->RX). If it doesn't work, try swapping the wires on 26 and 27.
 
 ### 2. RS485 Module to Energy Meter
@@ -25,5 +25,5 @@ We have remapped the Serial2 communication to **GPIO 26 and 27**.
 | **B-** | **Terminal B (-)** |
 
 ## Troubleshooting
-- **No Data?** Try swapping 26 and 27.
+- **No Data?** Try swapping 16 and 17.
 - **Still No Data?** Try swapping A and B on the meter side.

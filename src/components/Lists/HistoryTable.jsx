@@ -10,15 +10,17 @@ export default function HistoryTable({ history }) {
         }
 
         // 1. Define Headers
-        const headers = ["TIME", "TEMP (°C)", "HUMIDITY (%)", "CO2 (ppm)", "ENERGY (kWh)", "STATUS"];
+        const headers = ["TIME", "TEMP (°C)", "HUMIDITY (%)", "CO2 (ppm)", "ENERGY (kWh)", "VOLTAGE (V)", "CURRENT (A)", "STATUS"];
 
         // 2. Format Data Rows
         const rows = history.map(row => [
             row.time,
-            row.temperature.value,
-            row.humidity.value,
-            row.co2.value,
-            row.energy.value,
+            row.temperature?.value ?? '--',
+            row.humidity?.value    ?? '--',
+            row.co2?.value         ?? '--',
+            row.energy?.value      ?? '--',
+            row.voltage?.value     ?? '--',
+            row.current?.value     ?? '--',
             row.isAnomaly ? "ANOMALY" : "NORMAL"
         ]);
 
@@ -79,6 +81,8 @@ export default function HistoryTable({ history }) {
                             <th style={{ padding: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>HUMIDITY (%)</th>
                             <th style={{ padding: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>CO2 (ppm)</th>
                             <th style={{ padding: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>ENERGY (kWh)</th>
+                            <th style={{ padding: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>VOLTAGE (V)</th>
+                            <th style={{ padding: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>CURRENT (A)</th>
                             <th style={{ padding: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>STATUS</th>
                         </tr>
                     </thead>
@@ -92,10 +96,12 @@ export default function HistoryTable({ history }) {
                                 onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                             >
                                 <td style={{ padding: '12px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{row.time}</td>
-                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.temperature.value}</td>
-                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.humidity.value}</td>
-                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.co2.value}</td>
-                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.energy.value}</td>
+                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.temperature?.value ?? '--'}</td>
+                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.humidity?.value    ?? '--'}</td>
+                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.co2?.value         ?? '--'}</td>
+                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.energy?.value      ?? '--'}</td>
+                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.voltage?.value     ?? '--'}</td>
+                                <td style={{ padding: '12px', color: 'var(--text-primary)' }}>{row.current?.value     ?? '--'}</td>
                                 <td style={{ padding: '12px' }}>
                                     <span className="badge" style={{
                                         background: row.isAnomaly ? 'rgba(255, 77, 77, 0.1)' : 'rgba(10, 255, 104, 0.1)',

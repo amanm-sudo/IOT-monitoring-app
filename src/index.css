@@ -231,6 +231,23 @@ body {
   grid-column: 1 / -1;
 }
 
+/* AQI Sections */
+.aqi-overview-section {
+  grid-column: 1 / 8;
+}
+
+.aqi-chart-section {
+  grid-column: 8 / -1;
+}
+
+@media (max-width: 1200px) {
+
+  .aqi-overview-section,
+  .aqi-chart-section {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Responsive Grid */
 @media (max-width: 1400px) {
   .charts-section {

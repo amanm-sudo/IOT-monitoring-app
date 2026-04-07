@@ -7,8 +7,8 @@
 #include <ModbusMaster.h>
 
 // RS485 Pins
-#define RX2_PIN 26
-#define TX2_PIN 27
+#define RX2_PIN 16
+#define TX2_PIN 17
 
 ModbusMaster node;
 
