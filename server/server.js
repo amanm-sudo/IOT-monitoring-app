@@ -13,10 +13,28 @@ app.use(cors());
 app.use(express.json());
 
 // Database Connection
+if (!process.env.DATABASE_URL) {
+    console.error('FATAL: DATABASE_URL environment variable is not set!');
+} else {
+    console.log('DATABASE_URL is set, connecting to:', process.env.DATABASE_URL.split('@')[1] || 'unknown host');
+}
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    max: 10
+});
+
+// Test DB connection on startup
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('DB CONNECTION FAILED:', err.message);
+        console.error('Error code:', err.code);
+    } else {
+        console.log('DB connected successfully!');
+        release();
     }
 });
 
@@ -41,6 +59,28 @@ io.on('connection', (socket) => {
 
 app.get('/', (req, res) => {
     res.send('UGQ AI IoT Backend is Running — Energy + AQI');
+});
+
+// Health check — shows DB connectivity status
+app.get('/health', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT NOW() as time, current_database() as db');
+        res.json({
+            status: 'ok',
+            db: 'connected',
+            database: result.rows[0].db,
+            time: result.rows[0].time,
+            env_set: !!process.env.DATABASE_URL
+        });
+    } catch (err) {
+        res.status(500).json({
+            status: 'error',
+            db: 'failed',
+            error: err.message,
+            code: err.code,
+            env_set: !!process.env.DATABASE_URL
+        });
+    }
 });
 
 // ============================================
