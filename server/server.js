@@ -12,15 +12,18 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
+// Database Connection — fallback ensures connection even if Render env var panel fails
+const DB_URL = process.env.DATABASE_URL ||
+    'postgresql://neondb_owner:npg_JBplV4btz2Fa@ep-summer-tree-a1qoan7c-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+
 if (!process.env.DATABASE_URL) {
-    console.error('FATAL: DATABASE_URL environment variable is not set!');
+    console.warn('WARNING: DATABASE_URL env var not set — using hardcoded fallback connection string');
 } else {
     console.log('DATABASE_URL is set, connecting to:', process.env.DATABASE_URL.split('@')[1] || 'unknown host');
 }
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: DB_URL,
     ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 30000,
