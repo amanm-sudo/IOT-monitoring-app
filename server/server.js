@@ -61,7 +61,7 @@ io.on('connection', (socket) => {
 // ============================================
 
 app.get('/', (req, res) => {
-    res.send('UGQ AI IoT Backend is Running — Energy + AQI');
+    res.send('UGQ IoT Backend — Energy Meter Monitor');
 });
 
 // Health check — shows DB connectivity status
@@ -103,34 +103,31 @@ app.get('/api/sensors/history', async (req, res) => {
 
 // Energy Sensor Data Ingestion (for ESP32 Energy Meter)
 app.post('/api/sensors/readings', async (req, res) => {
-    const { device_id, temperature, humidity, co2_ppm, energy_kwh, voltage, current } = req.body;
+    const { device_id, energy_kwh, voltage, current } = req.body;
 
-    console.log('Energy reading received:', req.body);
+    console.log('Energy reading received:', { device_id, energy_kwh, voltage, current });
 
     try {
         const query = `
-            INSERT INTO sensor_readings (device_id, temperature, humidity, co2_ppm, energy_kwh, voltage, current)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO sensor_readings (device_id, energy_kwh, voltage, current)
+            VALUES ($1, $2, $3, $4)
             RETURNING *;
         `;
-        const result = await pool.query(query, [device_id, temperature, humidity, co2_ppm, energy_kwh, voltage || 0, current || 0]);
+        const result = await pool.query(query, [device_id, energy_kwh || 0, voltage || 0, current || 0]);
 
         // Emit to Frontend via WebSocket
         io.emit('new_reading', {
             device_id,
-            temperature,
-            humidity,
-            co2_ppm,
             energy_kwh,
             voltage,
             current,
             timestamp: new Date()
         });
 
-        res.status(201).json({ message: 'Energy data received', data: req.body });
+        res.status(201).json({ message: 'Energy data received', data: result.rows[0] });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Server error' });
+        console.error('Energy insert error:', err);
+        res.status(500).json({ error: 'Server error', detail: err.message });
     }
 });
 
