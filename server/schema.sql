@@ -15,6 +15,11 @@ ALTER TABLE sensor_readings DROP COLUMN IF EXISTS temperature;
 ALTER TABLE sensor_readings DROP COLUMN IF EXISTS humidity;
 ALTER TABLE sensor_readings DROP COLUMN IF EXISTS co2_ppm;
 
+-- ADD the energy meter columns if they don't exist yet (idempotent)
+ALTER TABLE sensor_readings ADD COLUMN IF NOT EXISTS energy_kwh DECIMAL(10,4);
+ALTER TABLE sensor_readings ADD COLUMN IF NOT EXISTS voltage    DECIMAL(8,2);
+ALTER TABLE sensor_readings ADD COLUMN IF NOT EXISTS current    DECIMAL(8,4);
+
 -- Optimize queries by time
 CREATE INDEX IF NOT EXISTS idx_readings_timestamp ON sensor_readings(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_readings_device    ON sensor_readings(device_id);
