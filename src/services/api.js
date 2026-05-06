@@ -92,6 +92,18 @@ export const APIService = {
         }
     },
 
+    // Daily energy consumption for past 7 days
+    async getDailyEnergy() {
+        try {
+            const response = await fetch(`${API_URL}/api/sensors/energy/daily`);
+            if (!response.ok) throw new Error('Daily energy failed');
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch daily energy', error);
+            return null; // caller will use fallback
+        }
+    },
+
     // Mock predictions
     async getPredictions() {
         return {

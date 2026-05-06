@@ -203,6 +203,58 @@ app.get('/api/sensors/aqi/latest', async (req, res) => {
     }
 });
 
+// ============================================
+// DAILY ENERGY AGGREGATION (past 7 days)
+// ============================================
+
+// GET /api/sensors/energy/daily
+// Returns last 7 calendar days (today included) with total energy_kwh per day
+app.get('/api/sensors/energy/daily', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT
+                DATE(timestamp AT TIME ZONE 'Asia/Kolkata') AS day,
+                COALESCE(MAX(energy_kwh), 0)               AS total_energy
+            FROM sensor_readings
+            WHERE timestamp >= NOW() - INTERVAL '7 days'
+            GROUP BY day
+            ORDER BY day ASC
+        `);
+
+        const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Build a map of date-string -> total_energy from DB
+        const dbMap = {};
+        result.rows.forEach(r => {
+            // r.day is a JS Date from pg
+            const key = new Date(r.day).toISOString().slice(0, 10);
+            dbMap[key] = parseFloat(r.total_energy) || 0;
+        });
+
+        // Generate last 7 days ending today
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - i);
+            const key = d.toISOString().slice(0, 10);
+            const isToday = i === 0;
+            days.push({
+                date: key,
+                label: isToday ? 'TODAY' : DAY_NAMES[d.getDay()],
+                energy: dbMap[key] ?? null,
+                isToday,
+            });
+        }
+
+        res.json(days);
+    } catch (err) {
+        console.error('Daily energy error:', err);
+        res.status(500).json({ error: 'Server error', detail: err.message });
+    }
+});
+
 // Get AQI History (filterable by location)
 app.get('/api/sensors/aqi/history', async (req, res) => {
     try {
