@@ -231,12 +231,22 @@ function ConsumptionChart({ dailyEnergy }) {
         });
     }, [dailyEnergy]);
 
+    // Compute a sensible Y-axis max: at least 15 kWh, or 25% above the highest real bar
+    const maxVal = Math.max(...data.map(d => d.value), 0);
+    const yMax = maxVal > 0 ? Math.ceil(maxVal * 1.25) : 15;
+
     return (
         <div className="chart-card">
-            <div className="chart-title">Energy Consumption – Past 7 Days</div>
-            <div style={{ height: 220 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span className="chart-title" style={{ marginBottom: 0 }}>Energy Consumption – Past 7 Days</span>
+                <div className="chart-legend">
+                    <div className="legend-item"><div className="legend-line" style={{ background: 'var(--amber)' }} /><span>Today</span></div>
+                    <div className="legend-item"><div className="legend-line" style={{ background: 'var(--teal)' }} /><span>Past days</span></div>
+                </div>
+            </div>
+            <div style={{ height: 200 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <BarChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
                         <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} />
                         <YAxis
@@ -244,7 +254,8 @@ function ConsumptionChart({ dailyEnergy }) {
                             tickLine={false}
                             axisLine={false}
                             unit=" kWh"
-                            width={48}
+                            width={52}
+                            domain={[0, yMax]}
                         />
                         <Tooltip
                             contentStyle={{
@@ -256,12 +267,12 @@ function ConsumptionChart({ dailyEnergy }) {
                             }}
                             labelStyle={{ color: 'var(--text-muted)' }}
                             formatter={(val, _name, props) => [
-                                props.payload.hasData ? `${Number(val).toFixed(2)} kWh` : 'No data',
+                                props.payload.hasData ? `${Number(val).toFixed(2)} kWh` : 'No data yet',
                                 'Energy'
                             ]}
-                            cursor={{ fill: 'var(--border)' }}
+                            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
                         />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]} minPointSize={6}>
                             {data.map((entry, index) => (
                                 <Cell
                                     key={index}
@@ -272,7 +283,7 @@ function ConsumptionChart({ dailyEnergy }) {
                                                 ? 'var(--teal)'
                                                 : 'var(--bar-rest)'
                                     }
-                                    opacity={entry.hasData || entry.today ? 1 : 0.35}
+                                    opacity={entry.hasData || entry.today ? 1 : 0.22}
                                 />
                             ))}
                         </Bar>
