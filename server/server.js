@@ -77,19 +77,40 @@ async function sendMail({ to, subject, html }) {
     }
 }
 
-// Test email endpoint — visit /api/test-email?to=your@email.com to verify
+// Diagnostic email endpoint — bypasses sendMail wrapper for full visibility
 app.get('/api/test-email', async (req, res) => {
     const to = req.query.to;
     if (!to) return res.status(400).json({ error: 'Add ?to=your@email.com' });
+
+    const diag = {
+        GMAIL_USER_set: !!process.env.GMAIL_USER,
+        GMAIL_USER_value: process.env.GMAIL_USER || '(not set)',
+        GMAIL_APP_PASS_set: !!process.env.GMAIL_APP_PASS,
+        GMAIL_APP_PASS_length: (process.env.GMAIL_APP_PASS || '').length,
+    };
+
+    // Step 1: Verify SMTP connection
     try {
-        await sendMail({
-            to,
-            subject: '✅ IoT Monitor — Test Email',
-            html: '<div style="font-family:sans-serif;padding:20px;"><h2>Email is working!</h2><p>If you see this, Gmail SMTP is correctly configured.</p></div>',
-        });
-        res.json({ success: true, message: `Test email sent to ${to}` });
+        await mailer.verify();
+        diag.smtp_verify = 'OK';
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        diag.smtp_verify = `FAILED: ${err.message}`;
+        return res.json({ success: false, diag });
+    }
+
+    // Step 2: Actually send
+    try {
+        const info = await mailer.sendMail({
+            from: `"IoT Monitor" <${process.env.GMAIL_USER}>`,
+            to,
+            subject: 'Test Email from IoT Monitor',
+            html: '<h2>Email works!</h2><p>Gmail SMTP is correctly configured on Render.</p>',
+        });
+        diag.sendResult = { messageId: info.messageId, response: info.response, accepted: info.accepted, rejected: info.rejected };
+        res.json({ success: true, diag });
+    } catch (err) {
+        diag.sendError = err.message;
+        res.json({ success: false, diag });
     }
 });
 
