@@ -403,25 +403,42 @@ function ComboChart({ history, user }) {
         return () => { cancelled = true; clearTimeout(timer); };
     }, [user]);
 
-    // Build chart data: only mark comfort at timestamps NEAR a real survey (within 2h)
-    const TWO_HOURS = 2 * 60 * 60 * 1000;
+    // Build chart data: assign each survey's comfort to only the CLOSEST data point
     const data = useMemo(() => {
         if (!surveys?.length || !history?.length) return [];
-        const energySlice = [...history].reverse().slice(-20);
-        return energySlice.map((r, i) => {
-            const rowTs = r.rawTs
+        const energySlice = [...history].reverse().slice(-20); // oldest→newest
+
+        // Parse timestamps for each data point
+        const points = energySlice.map((r, i) => ({
+            row: r,
+            ts: r.rawTs
                 ? new Date(r.rawTs).getTime()
-                : Date.now() - (energySlice.length - i) * 30000;
-            const nearby = surveys.find(s => {
-                const diff = Math.abs(new Date(s.submitted_at).getTime() - rowTs);
-                return diff <= TWO_HOURS;
+                : Date.now() - (energySlice.length - i) * 30000,
+            comfort: null, // will be set below
+        }));
+
+        // For each survey, find the single closest data point and mark it
+        const usedIndices = new Set();
+        for (const s of surveys) {
+            const surveyTs = new Date(s.submitted_at).getTime();
+            let bestIdx = -1, bestDiff = Infinity;
+            points.forEach((p, idx) => {
+                const diff = Math.abs(p.ts - surveyTs);
+                if (diff < bestDiff && !usedIndices.has(idx)) {
+                    bestDiff = diff; bestIdx = idx;
+                }
             });
-            return {
-                t: r.time || `${i}`,
-                comfort: nearby != null ? nearby.comfort_level : null,
-                energy:  Number(r.energy?.value ?? 0),
-            };
-        });
+            if (bestIdx >= 0) {
+                points[bestIdx].comfort = s.comfort_level;
+                usedIndices.add(bestIdx);
+            }
+        }
+
+        return points.map(p => ({
+            t: p.row.time || '',
+            comfort: p.comfort,
+            energy: Number(p.row.energy?.value ?? 0),
+        }));
     }, [surveys, history]);
 
     // Empty state: no surveys yet
