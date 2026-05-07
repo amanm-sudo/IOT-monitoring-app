@@ -113,22 +113,32 @@ function CardOptions({ options, value, onChange }) {
 
 function ScaleInput({ min, max, labels, value, onChange }) {
   const points = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  const minLabel = labels[String(min)];  // "Cold"
+  const maxLabel = labels[String(max)];  // "Hot"
+
   return (
     <div className="q-scale-wrap">
-      <div className="q-scale-row">
-        {points.map(p => (
-          <button
-            key={p}
-            type="button"
-            className={`q-scale-btn ${value === p ? 'active' : ''}`}
-            onClick={() => onChange(p)}
-            id={`scale-${p}`}
-          >
-            <span className="q-scale-num">{p > 0 ? `+${p}` : p}</span>
-            <span className="q-scale-lbl">{labels[String(p)]}</span>
-          </button>
-        ))}
+      {/* Track: left label | circles | right label */}
+      <div className="q-scale-track">
+        <span className="q-scale-end-label">{minLabel}</span>
+        <div className="q-scale-row">
+          {points.map(p => (
+            <button
+              key={p}
+              type="button"
+              className={`q-scale-btn ${value === p ? 'active' : ''}`}
+              onClick={() => onChange(p)}
+              id={`scale-${p}`}
+              title={labels[String(p)]}
+            >
+              <span className="q-scale-num">{p > 0 ? `+${p}` : p}</span>
+            </button>
+          ))}
+        </div>
+        <span className="q-scale-end-label">{maxLabel}</span>
       </div>
+
+      {/* Selected label shown below */}
       {value !== null && (
         <div className="q-scale-selected">
           Selected: <strong>{value > 0 ? `+${value}` : value}</strong> — {labels[String(value)]}

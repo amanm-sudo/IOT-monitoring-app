@@ -537,46 +537,57 @@ td.energy-val { color: var(--teal); font-weight: 500; }
 .q-card-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .q-card-sub   { font-size: 11px; color: var(--text-muted); line-height: 1.3; }
 
-/* ASHRAE Scale */
-.q-scale-wrap { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+/* ASHRAE Scale — redesigned */
+.q-scale-wrap { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+
+/* Outer wrapper keeps labels at ends, numbers in middle */
+.q-scale-track {
+  display: flex; align-items: center; gap: 10px;
+}
+.q-scale-end-label {
+  font-size: 11px; color: var(--text-muted); white-space: nowrap;
+  flex-shrink: 0; font-weight: 500;
+}
+
+/* The 7 buttons in a flex row */
 .q-scale-row  {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  overflow: visible;
-}
-@media (max-width: 700px) {
-  .q-scale-row { grid-template-columns: repeat(4, 1fr); }
-}
-@media (max-width: 420px) {
-  .q-scale-row { grid-template-columns: repeat(3, 1fr); }
+  display: flex; flex: 1; gap: 6px; justify-content: space-between;
 }
 .q-scale-btn {
-  padding: 10px 2px 8px; border-radius: var(--radius-sm);
-  background: var(--bg-card); border: 1.5px solid var(--border);
-  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  transition: border-color 0.18s, background 0.18s;
-  width: 100%; min-width: 0; min-height: 72px;
-  overflow: visible;
+  flex: 1; aspect-ratio: 1 / 1; max-width: 56px;
+  border-radius: 50%; border: 1.5px solid var(--border);
+  background: var(--bg-card); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+  padding: 0;
 }
-.q-scale-btn:hover { border-color: rgba(45,212,191,0.3); }
-.q-scale-btn.active { border-color: var(--teal); background: var(--teal-dim); }
+.q-scale-btn:hover { border-color: rgba(45,212,191,0.4); background: rgba(45,212,191,0.05); }
+.q-scale-btn.active {
+  border-color: var(--teal); background: var(--teal-dim);
+  box-shadow: 0 0 0 3px rgba(45,212,191,0.15);
+}
 .q-scale-num {
   font-size: 15px; font-weight: 700; color: var(--text-primary);
-  font-variant-numeric: tabular-nums; line-height: 1; flex-shrink: 0;
+  font-variant-numeric: tabular-nums; line-height: 1; pointer-events: none;
 }
-.q-scale-lbl {
-  font-size: 9.5px; color: var(--text-muted); text-align: center;
-  line-height: 1.25; overflow-wrap: break-word; word-break: break-word;
-  hyphens: auto; padding: 0 1px; white-space: normal;
-  display: block; width: 100%;
-}
+/* Remove old label inside button — not used */
+.q-scale-lbl { display: none; }
+
+/* Selected label pill */
 .q-scale-selected {
   font-size: 13px; color: var(--text-secondary);
   padding: 10px 14px; background: var(--bg-card);
   border-radius: var(--radius-sm); border: 1px solid var(--border);
+  text-align: center;
 }
 .q-scale-selected strong { color: var(--teal); }
+
+/* Mobile: smaller circles */
+@media (max-width: 500px) {
+  .q-scale-btn { max-width: 40px; }
+  .q-scale-num { font-size: 13px; }
+  .q-scale-end-label { font-size: 10px; }
+}
 
 /* Nav buttons */
 .q-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; }
