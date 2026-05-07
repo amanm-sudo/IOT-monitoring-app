@@ -235,6 +235,12 @@ export default function QuestionnairePage() {
   const navigate  = useNavigate();
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  // Pre-warm ML server on Render (fire-and-forget) — by the time user
+  // finishes all 7 questions, the cold start will be done
+  React.useEffect(() => {
+    fetch(`${API}/api/ml/warm`).catch(() => {});
+  }, []);
+
   const [answers, setAnswers] = useState({
     gender: null,
     thermal_sensation: null,

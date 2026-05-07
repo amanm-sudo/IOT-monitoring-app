@@ -220,6 +220,14 @@ app.put('/api/profile', requireAuth, async (req, res) => {
  * 3. Stores result in comfort_surveys
  * 4. Sends alert email if comfort_level is 0 or 3
  */
+
+// Pre-warm ML server (call from frontend when survey page loads)
+app.get('/api/ml/warm', (_req, res) => {
+    const baseUrl = ML_URL.replace('/predict', '');
+    axios.get(`${baseUrl}/health`, { timeout: 10000 }).catch(() => {});
+    res.json({ status: 'warming' });
+});
+
 app.post('/api/survey/submit', requireAuth, async (req, res) => {
     const {
         gender, thermal_sensation, activity, clothing,
@@ -244,16 +252,13 @@ app.post('/api/survey/submit', requireAuth, async (req, res) => {
     // ── Call ML model ────────────────────────────────────────
     let comfortLevel = 1, comfortLabel = 'Slightly Cool / Neutral', action = 'Environment is within acceptable comfort range.', modelNote = null;
     try {
-        // Wake up Render free-tier instance first (avoids cold-start timeout)
-        const baseUrl = ML_URL.replace('/predict', '');
-        try { await axios.get(`${baseUrl}/health`, { timeout: 5000 }); } catch { /* ok, still warming */ }
-
         const mlPayload = {
             gender, thermal_sensation, activity, clothing,
             air_movement, humidity_pref, ventilation_pref,
             temperature: roomTemp, humidity: roomHumidity, co2: roomCo2,
         };
-        const mlRes = await axios.post(ML_URL, mlPayload, { timeout: 30000 });
+        // 55s timeout covers Render free-tier cold starts (~50s)
+        const mlRes = await axios.post(ML_URL, mlPayload, { timeout: 55000 });
         comfortLevel  = parseInt(mlRes.data.comfort_level ?? 1);
         comfortLabel  = mlRes.data.label || comfortLabel;
         action        = mlRes.data.action || action;
