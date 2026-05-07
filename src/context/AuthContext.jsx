@@ -63,11 +63,18 @@ export function AuthProvider({ children }) {
     if (userId) {
       const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const token = session?.access_token;
-      fetch(`${API}/api/auth/register`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ userId, email, name }),
-      }).catch(() => {}); // fire-and-forget, don't block UI
+      // Send register request with retry — ensures welcome email sends even on cold start
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+      try {
+        await fetch(`${API}/api/auth/register`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ userId, email, name }),
+          signal:  controller.signal,
+        });
+      } catch { /* backend might be cold — email may not send */ }
+      clearTimeout(timeout);
     }
     return data;
   }

@@ -51,10 +51,16 @@ const mailer = nodemailer.createTransport({
     secure: true,
     auth: {
         user: process.env.GMAIL_USER || '',
-        // Strip dashes — Google accepts both formats (with or without)
         pass: (process.env.GMAIL_APP_PASS || '').replace(/-/g, ''),
     },
 });
+
+// Verify SMTP connection on startup
+if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASS) {
+    mailer.verify()
+        .then(() => console.log('[Mailer] ✅ SMTP connection verified — emails will work'))
+        .catch(err => console.error('[Mailer] ❌ SMTP verify failed:', err.message));
+}
 
 
 async function sendMail({ to, subject, html }) {
@@ -63,10 +69,11 @@ async function sendMail({ to, subject, html }) {
         return;
     }
     try {
-        await mailer.sendMail({ from: `"IoT Monitor 🌡️" <${process.env.GMAIL_USER}>`, to, subject, html });
-        console.log(`[Mailer] Sent "${subject}" → ${to}`);
+        console.log(`[Mailer] Sending "${subject}" to ${to}...`);
+        await mailer.sendMail({ from: `"IoT Monitor" <${process.env.GMAIL_USER}>`, to, subject, html });
+        console.log(`[Mailer] ✅ Sent "${subject}" → ${to}`);
     } catch (err) {
-        console.error('[Mailer] Failed:', err.message);
+        console.error(`[Mailer] ❌ Failed to send "${subject}" to ${to}:`, err.message);
     }
 }
 
@@ -124,6 +131,7 @@ app.get('/health', async (req, res) => {
  */
 app.post('/api/auth/register', async (req, res) => {
     const { userId, email, name } = req.body;
+    console.log(`[Register] Received register request for ${email}`);
     if (!userId || !email) return res.status(400).json({ error: 'userId and email required' });
 
     try {
