@@ -77,6 +77,22 @@ async function sendMail({ to, subject, html }) {
     }
 }
 
+// Test email endpoint — visit /api/test-email?to=your@email.com to verify
+app.get('/api/test-email', async (req, res) => {
+    const to = req.query.to;
+    if (!to) return res.status(400).json({ error: 'Add ?to=your@email.com' });
+    try {
+        await sendMail({
+            to,
+            subject: '✅ IoT Monitor — Test Email',
+            html: '<div style="font-family:sans-serif;padding:20px;"><h2>Email is working!</h2><p>If you see this, Gmail SMTP is correctly configured.</p></div>',
+        });
+        res.json({ success: true, message: `Test email sent to ${to}` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // ── ML Model ─────────────────────────────────────────────────
 const ML_URL = process.env.ML_MODEL_URL || 'http://localhost:8000/predict';
 
