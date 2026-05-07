@@ -20,18 +20,6 @@ const QUESTIONS = [
     ],
   },
   {
-    id: 'thermal_sensation',
-    label: 'How do you feel thermally right now?',
-    sub: 'ASHRAE 7-point scale — tap the value that best describes your current sensation.',
-    type: 'scale',
-    min: -3, max: 3,
-    labels: {
-      '-3': 'Cold',  '-2': 'Cool',  '-1': 'Slightly Cool',
-       '0': 'Neutral',
-       '1': 'Slightly Warm', '2': 'Warm', '3': 'Hot',
-    },
-  },
-  {
     id: 'activity',
     label: 'What is your current activity level?',
     sub: 'This determines your metabolic heat output.',
@@ -65,28 +53,6 @@ const QUESTIONS = [
       { value: 'slight',   label: 'Slight Breeze',  emoji: '🍃', sub: 'Barely perceptible' },
       { value: 'moderate', label: 'Moderate',       emoji: '💨', sub: 'Fan / open window' },
       { value: 'strong',   label: 'Strong',         emoji: '🌬️', sub: 'Noticeably windy / AC' },
-    ],
-  },
-  {
-    id: 'humidity_pref',
-    label: 'How does the humidity feel?',
-    sub: 'Your current perception of moisture in the air.',
-    type: 'card',
-    options: [
-      { value: 'dry',         label: 'Too Dry',    emoji: '🏜️', sub: 'Dry skin / throat' },
-      { value: 'comfortable', label: 'Comfortable',emoji: '✅', sub: 'Feels just right' },
-      { value: 'humid',       label: 'Too Humid',  emoji: '💧', sub: 'Sticky / muggy' },
-    ],
-  },
-  {
-    id: 'ventilation_pref',
-    label: 'What would you prefer for ventilation?',
-    sub: 'Your preference for how air should circulate in the space.',
-    type: 'card',
-    options: [
-      { value: 'less',  label: 'Less Ventilation', emoji: '🔒', sub: 'Keep windows/vents closed' },
-      { value: 'same',  label: 'Keep as is',       emoji: '⚖️', sub: 'Current level is fine' },
-      { value: 'more',  label: 'More Ventilation', emoji: '🪟', sub: 'Open windows / increase fan' },
     ],
   },
 ];
@@ -243,12 +209,9 @@ export default function QuestionnairePage() {
 
   const [answers, setAnswers] = useState({
     gender: null,
-    thermal_sensation: null,
     activity: null,
     clothing: null,
     air_movement: null,
-    humidity_pref: null,
-    ventilation_pref: null,
   });
   const [step,      setStep]   = useState(0);   // which question is active
   const [result,    setResult] = useState(null);
@@ -291,7 +254,7 @@ export default function QuestionnairePage() {
     }
   }
 
-  function handleRedo() { setResult(null); setStep(0); setAnswers({ gender:null, thermal_sensation:null, activity:null, clothing:null, air_movement:null, humidity_pref:null, ventilation_pref:null }); }
+  function handleRedo() { setResult(null); setStep(0); setAnswers({ gender:null, activity:null, clothing:null, air_movement:null }); }
 
   /* ── Result state ── */
   if (result) return (

@@ -230,8 +230,11 @@ app.get('/api/ml/warm', (_req, res) => {
 
 app.post('/api/survey/submit', requireAuth, async (req, res) => {
     const {
-        gender, thermal_sensation, activity, clothing,
-        air_movement, humidity_pref, ventilation_pref,
+        gender, activity, clothing, air_movement,
+        // These 3 were removed from the frontend survey — use sensible defaults
+        thermal_sensation = 0,          // neutral
+        humidity_pref     = 'comfortable',
+        ventilation_pref  = 'same',
     } = req.body;
 
     // ── Get latest sensor context (best-effort) ──────────────
