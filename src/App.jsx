@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import { APIService } from './services/api';
+import { useAuth } from './context/AuthContext';
 import {
     LineChart, Line,
     BarChart, Bar, Cell, XAxis, YAxis,
@@ -370,28 +371,82 @@ function EnvBreakdown({ data, aqiData }) {
 }
 
 /* ─── Comfort vs Energy Combo Chart ─── */
-function ComboChart({ history }) {
+function ComboChart({ history, user }) {
+    const [surveys,    setSurveys]    = React.useState(null); // null = loading, [] = none
+    const API = import.meta.env.VITE_API_URL || 'https://iot-monitoring-app-5xoi.onrender.com';
+
+    // Fetch survey history once user is available
+    React.useEffect(() => {
+        if (!user) { setSurveys([]); return; }
+        (async () => {
+            try {
+                const { createClient } = await import('@supabase/supabase-js');
+                const sb = createClient(
+                    import.meta.env.VITE_SUPABASE_URL,
+                    import.meta.env.VITE_SUPABASE_ANON_KEY
+                );
+                const { data: { session } } = await sb.auth.getSession();
+                const token = session?.access_token;
+                if (!token) { setSurveys([]); return; }
+                const res = await fetch(`${API}/api/survey/history`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) { setSurveys([]); return; }
+                setSurveys(await res.json());
+            } catch { setSurveys([]); }
+        })();
+    }, [user]);
+
+    // Build chart data: overlay survey comfort points onto energy timeline
     const data = useMemo(() => {
-        if (history && history.length > 2) {
-            return history.slice(-12).map((r, i) => ({
-                t: r.time || `${i * 2}h`,
-                comfort: 60 + Math.sin(i / 3) * 15,
-                energy: Number(r.energy?.value ?? 0),
-            }));
-        }
-        return Array.from({ length: 12 }, (_, i) => ({
-            t: `${i * 2}h`,
-            comfort: 60 + Math.sin(i / 2.5) * 12,
-            energy: 6 + Math.cos(i / 3) * 3 + Math.random() * 2,
-        }));
-    }, [history]);
+        if (!surveys?.length || !history?.length) return [];
+        // Map comfort_level (0-3) to a 0-100 score for display
+        const levelToScore = { 0: 10, 1: 40, 2: 70, 3: 95 };
+        // Take last 12 energy rows
+        const energySlice = history.slice(-12);
+        return energySlice.map((r, i) => {
+            const rowTs = new Date(r.rawTimestamp || Date.now()).getTime();
+            // Find closest survey to this energy row
+            const closest = surveys.reduce((best, s) => {
+                const diff = Math.abs(new Date(s.submitted_at).getTime() - rowTs);
+                return (!best || diff < best.diff) ? { s, diff } : best;
+            }, null);
+            return {
+                t: r.time || `${i}`,
+                comfort: closest ? levelToScore[closest.s.comfort_level] ?? 50 : null,
+                energy:  Number(r.energy?.value ?? 0),
+            };
+        });
+    }, [surveys, history]);
+
+    // Empty state: no surveys yet
+    if (surveys !== null && surveys.length === 0) {
+        return (
+            <div className="combo-chart-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 120 }}>
+                <span style={{ fontSize: 28 }}>🌡️</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Comfort vs Energy chart</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', maxWidth: 280 }}>
+                    Complete a <strong style={{ color: 'var(--teal)' }}>Comfort Survey</strong> to see how your thermal comfort correlates with energy usage.
+                </span>
+            </div>
+        );
+    }
+
+    // Loading state
+    if (surveys === null) {
+        return (
+            <div className="combo-chart-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Loading chart data…</span>
+            </div>
+        );
+    }
 
     return (
         <div className="combo-chart-card">
             <div className="combo-header">
-                <span className="chart-title" style={{ marginBottom: 0 }}>Comfort vs Energy Utilization (12H)</span>
+                <span className="chart-title" style={{ marginBottom: 0 }}>Comfort vs Energy Utilization</span>
                 <div className="chart-legend">
-                    <div className="legend-item"><div className="legend-line" style={{ background: 'var(--teal)' }} /><span>Comfort (PMV)</span></div>
+                    <div className="legend-item"><div className="legend-line" style={{ background: 'var(--teal)' }} /><span>Comfort Score</span></div>
                     <div className="legend-item"><div className="legend-line" style={{ background: 'var(--amber)' }} /><span>Energy (kWh)</span></div>
                 </div>
             </div>
@@ -402,18 +457,12 @@ function ComboChart({ history }) {
                         <XAxis dataKey="t" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} />
                         <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} />
                         <Tooltip
-                            contentStyle={{
-                                background: 'var(--bg-card)',
-                                border: '1px solid var(--border)',
-                                borderRadius: 8,
-                                fontSize: 12,
-                                color: 'var(--text-primary)'
-                            }}
+                            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text-primary)' }}
                             labelStyle={{ color: 'var(--text-muted)' }}
                             cursor={{ stroke: 'var(--border)' }}
                         />
-                        <Line type="monotone" dataKey="comfort" stroke="var(--teal)" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="energy" stroke="var(--amber)" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="comfort" stroke="var(--teal)" strokeWidth={2} dot={{ r: 4, fill: 'var(--teal)' }} connectNulls={false} />
+                        <Line type="monotone" dataKey="energy"  stroke="var(--amber)" strokeWidth={2} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
@@ -529,6 +578,9 @@ export default function App() {
     const toggleTheme = useCallback(() => {
         setTheme(t => t === 'dark' ? 'light' : 'dark');
     }, []);
+
+    /* ─ Auth ─ */
+    const { user } = useAuth();
 
     /* ─ Data ─ */
     const [data, setData] = useState(null);
@@ -701,7 +753,7 @@ export default function App() {
                 </div>
 
                 {/* Row 5: Combo Chart */}
-                <ComboChart history={history} />
+                <ComboChart history={history} user={user} />
 
                 {/* Row 6: History Table */}
                 <HistoryTable history={history} aqiData={aqiData} />
