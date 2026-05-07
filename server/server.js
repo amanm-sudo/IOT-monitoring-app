@@ -257,8 +257,9 @@ app.post('/api/survey/submit', requireAuth, async (req, res) => {
             air_movement, humidity_pref, ventilation_pref,
             temperature: roomTemp, humidity: roomHumidity, co2: roomCo2,
         };
-        // 55s timeout covers Render free-tier cold starts (~50s)
-        const mlRes = await axios.post(ML_URL, mlPayload, { timeout: 55000 });
+        // 10s timeout: if ML server is warm (from pre-warm ping), it responds in <1s.
+        // If cold, fall back to heuristic immediately — no point making user wait.
+        const mlRes = await axios.post(ML_URL, mlPayload, { timeout: 10000 });
         comfortLevel  = parseInt(mlRes.data.comfort_level ?? 1);
         comfortLabel  = mlRes.data.label || comfortLabel;
         action        = mlRes.data.action || action;
