@@ -20,12 +20,31 @@ CORS(app)
 # ── Load model ──────────────────────────────────────────────
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model.pkl')
 model = None
-try:
-    model = joblib.load(MODEL_PATH)
-    print(f"[OK] Model loaded: {MODEL_PATH}")
+
+# Try 1: load from file
+if os.path.exists(MODEL_PATH):
+    try:
+        model = joblib.load(MODEL_PATH)
+        print(f"[OK] Model loaded from file: {MODEL_PATH}")
+    except Exception as e:
+        print(f"[WARN] Failed to load model.pkl: {e}")
+
+# Try 2: load from MODEL_B64 environment variable (for cloud deployments)
+if model is None:
+    b64 = os.environ.get('MODEL_B64', '')
+    if b64:
+        try:
+            import base64, io as _io
+            model = joblib.load(_io.BytesIO(base64.b64decode(b64)))
+            print("[OK] Model loaded from MODEL_B64 env variable")
+        except Exception as e:
+            print(f"[WARN] Failed to decode MODEL_B64: {e}")
+
+if model is None:
+    print("[WARN] No model loaded — rule-based fallback will be used")
+else:
     print(f"     Steps: {[(n, type(e).__name__) for n, e in model.steps]}")
-except FileNotFoundError:
-    print(f"[WARN] model.pkl not found at {MODEL_PATH}")
+
 
 # ── Comfort output maps ──────────────────────────────────────
 COMFORT_LABELS = {
