@@ -457,19 +457,45 @@ function ComboChart({ history, user }) {
                     <div className="legend-item"><div className="legend-line" style={{ background: 'var(--amber)' }} /><span>Energy (kWh)</span></div>
                 </div>
             </div>
-            <div style={{ height: 180 }}>
+            <div style={{ height: 200 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <LineChart data={data} margin={{ top: 5, right: 40, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
                         <XAxis dataKey="t" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} />
+
+                        {/* Left Y-axis: Energy (kWh) */}
+                        <YAxis
+                            yAxisId="energy"
+                            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                            tickLine={false} axisLine={false}
+                            unit=" kWh"
+                            width={50}
+                        />
+
+                        {/* Right Y-axis: Comfort (0–3) */}
+                        <YAxis
+                            yAxisId="comfort"
+                            orientation="right"
+                            domain={[0, 3]}
+                            ticks={[0, 1, 2, 3]}
+                            tick={{ fill: 'var(--teal)', fontSize: 10, fontWeight: 600 }}
+                            tickLine={false} axisLine={false}
+                            width={30}
+                        />
+
                         <Tooltip
                             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text-primary)' }}
                             labelStyle={{ color: 'var(--text-muted)' }}
                             cursor={{ stroke: 'var(--border)' }}
+                            formatter={(val, name) => {
+                                if (name === 'comfort') return val != null ? [`Level ${val}`, 'Comfort'] : ['—', 'Comfort'];
+                                return [`${Number(val).toFixed(2)} kWh`, 'Energy'];
+                            }}
                         />
-                        <Line type="monotone" dataKey="comfort" stroke="var(--teal)" strokeWidth={2} dot={{ r: 4, fill: 'var(--teal)' }} connectNulls={false} />
-                        <Line type="monotone" dataKey="energy"  stroke="var(--amber)" strokeWidth={2} dot={false} />
+
+                        <Line yAxisId="comfort" type="monotone" dataKey="comfort" stroke="var(--teal)" strokeWidth={2.5}
+                            dot={{ r: 5, fill: 'var(--teal)', strokeWidth: 2, stroke: '#fff' }} connectNulls={false} />
+                        <Line yAxisId="energy" type="monotone" dataKey="energy" stroke="var(--amber)" strokeWidth={2} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>

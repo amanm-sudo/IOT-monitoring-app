@@ -1,14 +1,14 @@
-const express  = require('express');
-const http     = require('http');
+const express = require('express');
+const http = require('http');
 const { Server } = require('socket.io');
-const cors     = require('cors');
+const cors = require('cors');
 const { Pool } = require('pg');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
-const axios    = require('axios');
+const axios = require('axios');
 require('dotenv').config();
 
-const app    = express();
+const app = express();
 const server = http.createServer(app);
 
 // ── Middleware ───────────────────────────────────────────────
@@ -224,7 +224,7 @@ app.put('/api/profile', requireAuth, async (req, res) => {
 // Pre-warm ML server (call from frontend when survey page loads)
 app.get('/api/ml/warm', (_req, res) => {
     const baseUrl = ML_URL.replace('/predict', '');
-    axios.get(`${baseUrl}/health`, { timeout: 10000 }).catch(() => {});
+    axios.get(`${baseUrl}/health`, { timeout: 10000 }).catch(() => { });
     res.json({ status: 'warming' });
 });
 
@@ -243,9 +243,9 @@ app.post('/api/survey/submit', requireAuth, async (req, res) => {
             ORDER BY timestamp DESC LIMIT 1
         `);
         if (sensorRes.rows.length) {
-            roomTemp     = parseFloat(sensorRes.rows[0].temperature) || 25;
-            roomHumidity = parseFloat(sensorRes.rows[0].humidity)    || 50;
-            roomCo2      = parseInt(sensorRes.rows[0].co2)           || 600;
+            roomTemp = parseFloat(sensorRes.rows[0].temperature) || 25;
+            roomHumidity = parseFloat(sensorRes.rows[0].humidity) || 50;
+            roomCo2 = parseInt(sensorRes.rows[0].co2) || 600;
         }
     } catch { /* no sensor data, use defaults */ }
 
@@ -260,19 +260,19 @@ app.post('/api/survey/submit', requireAuth, async (req, res) => {
         // 10s timeout: if ML server is warm (from pre-warm ping), it responds in <1s.
         // If cold, fall back to heuristic immediately — no point making user wait.
         const mlRes = await axios.post(ML_URL, mlPayload, { timeout: 10000 });
-        comfortLevel  = parseInt(mlRes.data.comfort_level ?? 1);
-        comfortLabel  = mlRes.data.label || comfortLabel;
-        action        = mlRes.data.action || action;
-        modelNote     = mlRes.data.note  || null;
+        comfortLevel = parseInt(mlRes.data.comfort_level ?? 1);
+        comfortLabel = mlRes.data.label || comfortLabel;
+        action = mlRes.data.action || action;
+        modelNote = mlRes.data.note || null;
         console.log(`[ML] ✅ ML model responded: level=${comfortLevel} label=${comfortLabel}`);
     } catch (err) {
         console.warn('[ML] Model call failed:', err.message, '— using fallback heuristic');
         // Fallback: simple rule based on thermal_sensation
         const ts = Number(thermal_sensation ?? 0);
-        if (ts <= -1.5)      { comfortLevel = 0; comfortLabel = 'Cold'; action = 'Consider increasing room temperature or reducing ventilation.'; }
-        else if (ts >= 1.5)  { comfortLevel = 3; comfortLabel = 'Hot';  action = 'Consider lowering room temperature or increasing ventilation.'; }
-        else if (ts < 0)     { comfortLevel = 1; comfortLabel = 'Slightly Cool / Neutral'; }
-        else                 { comfortLevel = 2; comfortLabel = 'Slightly Warm / Neutral'; }
+        if (ts <= -1.5) { comfortLevel = 0; comfortLabel = 'Cold'; action = 'Consider increasing room temperature or reducing ventilation.'; }
+        else if (ts >= 1.5) { comfortLevel = 3; comfortLabel = 'Hot'; action = 'Consider lowering room temperature or increasing ventilation.'; }
+        else if (ts < 0) { comfortLevel = 1; comfortLabel = 'Slightly Cool / Neutral'; }
+        else { comfortLevel = 2; comfortLabel = 'Slightly Warm / Neutral'; }
         modelNote = 'ML server unavailable — result based on heuristic fallback.';
     }
 
@@ -284,7 +284,7 @@ app.post('/api/survey/submit', requireAuth, async (req, res) => {
               room_temp, room_humidity, room_co2, comfort_level, comfort_label)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
             [req.user.id, activity, clothing, thermal_sensation?.toString(), air_movement, humidity_pref,
-             roomTemp, roomHumidity, roomCo2, comfortLevel, comfortLabel],
+                roomTemp, roomHumidity, roomCo2, comfortLevel, comfortLabel],
         );
     } catch (dbErr) {
         console.error('[Survey] DB insert error:', dbErr.message);
@@ -293,7 +293,7 @@ app.post('/api/survey/submit', requireAuth, async (req, res) => {
     // ── Alert email for extreme comfort levels ────────────────
     const isExtreme = comfortLevel === 0 || comfortLevel === 3;
     if (isExtreme) {
-        const emoji    = comfortLevel === 0 ? '❄️' : '🔥';
+        const emoji = comfortLevel === 0 ? '❄️' : '🔥';
         const tempWord = comfortLevel === 0 ? 'too cold' : 'too hot';
         const userEmail = req.user.email;
         await sendMail({
@@ -396,8 +396,8 @@ app.post('/api/sensors/aqi', async (req, res) => {
                 aqi_pm25, aqi_pm10, aqi_co2, aqi_tvoc, final_aqi, window_status
              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
             [device_id, location || 'unknown', pm1_0, pm2_5, pm4_0, pm10,
-             co2, tvoc, voc_index, nox_index, temperature, humidity,
-             aqi_pm25, aqi_pm10, aqi_co2, aqi_tvoc, final_aqi, window_status || 'closed'],
+                co2, tvoc, voc_index, nox_index, temperature, humidity,
+                aqi_pm25, aqi_pm10, aqi_co2, aqi_tvoc, final_aqi, window_status || 'closed'],
         );
         io.emit('new_aqi_reading', { ...req.body, timestamp: new Date() });
         res.status(201).json({ message: 'AQI data received' });
