@@ -244,16 +244,21 @@ app.post('/api/survey/submit', requireAuth, async (req, res) => {
     // ── Call ML model ────────────────────────────────────────
     let comfortLevel = 1, comfortLabel = 'Slightly Cool / Neutral', action = 'Environment is within acceptable comfort range.', modelNote = null;
     try {
+        // Wake up Render free-tier instance first (avoids cold-start timeout)
+        const baseUrl = ML_URL.replace('/predict', '');
+        try { await axios.get(`${baseUrl}/health`, { timeout: 5000 }); } catch { /* ok, still warming */ }
+
         const mlPayload = {
             gender, thermal_sensation, activity, clothing,
             air_movement, humidity_pref, ventilation_pref,
             temperature: roomTemp, humidity: roomHumidity, co2: roomCo2,
         };
-        const mlRes = await axios.post(ML_URL, mlPayload, { timeout: 8000 });
+        const mlRes = await axios.post(ML_URL, mlPayload, { timeout: 30000 });
         comfortLevel  = parseInt(mlRes.data.comfort_level ?? 1);
         comfortLabel  = mlRes.data.label || comfortLabel;
         action        = mlRes.data.action || action;
         modelNote     = mlRes.data.note  || null;
+        console.log(`[ML] ✅ ML model responded: level=${comfortLevel} label=${comfortLabel}`);
     } catch (err) {
         console.warn('[ML] Model call failed:', err.message, '— using fallback heuristic');
         // Fallback: simple rule based on thermal_sensation

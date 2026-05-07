@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CheckCircle, AlertTriangle, Thermometer, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import Navbar from '../components/Navbar';
 
 
 /* ─────────────────────── Question data ─────────────────────── */
@@ -288,18 +289,23 @@ export default function QuestionnairePage() {
 
   /* ── Result state ── */
   if (result) return (
-    <div className="survey-shell">
-      <div className="survey-header">
-        <Thermometer size={18} style={{ color: 'var(--teal)' }} />
-        <span className="survey-title">Thermal Comfort Analysis</span>
+    <>
+      <Navbar status="Online" />
+      <div className="survey-shell" style={{ minHeight: 'calc(100vh - 52px)' }}>
+        <div className="survey-header">
+          <Thermometer size={18} style={{ color: 'var(--teal)' }} />
+          <span className="survey-title">Thermal Comfort Analysis</span>
+        </div>
+        <ComfortResult result={result} onRedo={handleRedo} />
       </div>
-      <ComfortResult result={result} onRedo={handleRedo} />
-    </div>
+    </>
   );
 
   /* ── Question stepper ── */
   return (
-    <div className="survey-shell">
+    <>
+      <Navbar status="Online" />
+      <div className="survey-shell" style={{ minHeight: 'calc(100vh - 52px)' }}>
       <div className="survey-header">
         <Thermometer size={18} style={{ color: 'var(--teal)' }} />
         <span className="survey-title">Thermal Comfort Questionnaire</span>
@@ -353,5 +359,6 @@ export default function QuestionnairePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
