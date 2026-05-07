@@ -25,3 +25,8 @@ dist-ssr
 
 # Environment Variables
 .env
+server/.env
+
+# ML model binary (keep locally, don't commit)
+*.pkl
+ml_server/__pycache__/

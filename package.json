@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.3",
     "lucide-react": "^0.563.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-router-dom": "^7.15.0",
     "recharts": "^3.7.0",
     "socket.io-client": "^4.8.3"
   },

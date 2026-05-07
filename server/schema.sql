@@ -54,3 +54,41 @@ CREATE TABLE IF NOT EXISTS aqi_readings (
 CREATE INDEX IF NOT EXISTS idx_aqi_timestamp ON aqi_readings(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_aqi_device    ON aqi_readings(device_id);
 CREATE INDEX IF NOT EXISTS idx_aqi_location  ON aqi_readings(location);
+
+-- ============================================================
+--  USER PROFILES (mirrors Supabase auth.users)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id          UUID PRIMARY KEY,      -- matches supabase auth.users.id
+    email       TEXT NOT NULL UNIQUE,
+    name        TEXT,
+    dob         DATE,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+--  COMFORT SURVEYS (questionnaire results)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS comfort_surveys (
+    id              SERIAL PRIMARY KEY,
+    user_id         UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    -- Questionnaire answers
+    activity_level  TEXT,              -- 'resting','standing','walking','exercise'
+    clothing_level  TEXT,              -- 'minimal','light','medium','heavy'
+    thermal_pref    TEXT,              -- ASHRAE scale value as string (-3 to +3)
+    air_movement    TEXT,              -- 'still','slight','moderate','strong'
+    humidity_pref   TEXT,              -- 'dry','comfortable','humid'
+    -- Room snapshot at time of survey
+    room_temp       DECIMAL(5,2),
+    room_humidity   DECIMAL(5,2),
+    room_co2        INTEGER,
+    -- ML output
+    comfort_level   INTEGER,           -- 0=Cold, 1=Slightly Cool, 2=Slightly Warm, 3=Hot
+    comfort_label   TEXT,
+    submitted_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_surveys_user      ON comfort_surveys(user_id);
+CREATE INDEX IF NOT EXISTS idx_surveys_submitted ON comfort_surveys(submitted_at DESC);
+
