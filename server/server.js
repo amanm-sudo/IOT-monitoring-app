@@ -47,8 +47,8 @@ const supabase = createClient(
 // ── Nodemailer (Gmail App Password) ─────────────────────────
 const mailer = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false,       // use STARTTLS on port 587 (Render blocks 465)
     auth: {
         user: process.env.GMAIL_USER || '',
         pass: (process.env.GMAIL_APP_PASS || '').replace(/-/g, ''),
