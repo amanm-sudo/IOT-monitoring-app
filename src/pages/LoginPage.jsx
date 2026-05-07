@@ -49,9 +49,15 @@ export default function LoginPage() {
         navigate('/');
       } else {
         if (!name.trim()) { setError('Name is required.'); setLoading(false); return; }
-        await signUp({ email, password, name });
-        setInfo('Check your inbox to confirm your email, then log in.');
-        setTab('login');
+        const result = await signUp({ email, password, name });
+        // If Supabase auto-confirmed (email confirm disabled) we can go straight to dashboard
+        if (result?.session) {
+          navigate('/');
+        } else {
+          setInfo('Account created! Check your email to confirm, then sign in.');
+          setTab('login');
+        }
+
       }
     } catch (err) {
       setError(err.message || 'Something went wrong.');

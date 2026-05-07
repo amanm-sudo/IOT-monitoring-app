@@ -50,15 +50,28 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
 
+    // If Supabase auto-confirmed (email confirm disabled), we already have a session.
+    // If not, try signing in immediately (works when email confirm is OFF in Supabase).
+    let session = data.session;
+    if (!session) {
+      const signInRes = await supabase.auth.signInWithPassword({ email, password });
+      if (!signInRes.error) session = signInRes.data.session;
+    }
+
     // Notify backend to create profile row + send welcome email
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    await fetch(`${API}/api/auth/register`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ userId: data.user?.id, email, name }),
-    });
+    const userId = data.user?.id || session?.user?.id;
+    if (userId) {
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = session?.access_token;
+      fetch(`${API}/api/auth/register`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ userId, email, name }),
+      }).catch(() => {}); // fire-and-forget, don't block UI
+    }
     return data;
   }
+
 
   /* ── Sign In ────────────────────────────────────────────── */
   async function signIn({ email, password }) {
