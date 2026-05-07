@@ -207,16 +207,14 @@ function AQITrendChart({ history }) {
 /* ─── Energy Consumption – Past 7 Days Bar Chart ─── */
 function ConsumptionChart({ dailyEnergy }) {
     const data = useMemo(() => {
-        // If the API returned real data, use it directly
         if (Array.isArray(dailyEnergy) && dailyEnergy.length > 0) {
             return dailyEnergy.map(d => ({
                 name: d.label,
                 value: d.energy != null ? +d.energy : 0,
-                hasData: d.energy != null,
+                hasData: d.energy != null && +d.energy > 0,
                 today: d.isToday,
             }));
         }
-        // Fallback: build 7-day labels from today's real date
         const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
         const today = new Date();
         return Array.from({ length: 7 }, (_, i) => {
@@ -232,7 +230,6 @@ function ConsumptionChart({ dailyEnergy }) {
         });
     }, [dailyEnergy]);
 
-    // Compute a sensible Y-axis max: at least 15 kWh, or 25% above the highest real bar
     const maxVal = Math.max(...data.map(d => d.value), 0);
     const yMax = maxVal > 0 ? Math.ceil(maxVal * 1.25) : 15;
 
@@ -271,9 +268,9 @@ function ConsumptionChart({ dailyEnergy }) {
                                 props.payload.hasData ? `${Number(val).toFixed(2)} kWh` : 'No data yet',
                                 'Energy'
                             ]}
-                            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                            cursor={{ fill: 'rgba(128,128,128,0.08)' }}
                         />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]} minPointSize={6}>
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]} minPointSize={8}>
                             {data.map((entry, index) => (
                                 <Cell
                                     key={index}
@@ -284,7 +281,7 @@ function ConsumptionChart({ dailyEnergy }) {
                                                 ? 'var(--teal)'
                                                 : 'var(--bar-rest)'
                                     }
-                                    opacity={entry.hasData || entry.today ? 1 : 0.22}
+                                    opacity={entry.hasData || entry.today ? 1 : 0.4}
                                 />
                             ))}
                         </Bar>
@@ -372,51 +369,56 @@ function EnvBreakdown({ data, aqiData }) {
 
 /* ─── Comfort vs Energy Combo Chart ─── */
 function ComboChart({ history, user }) {
-    const [surveys,    setSurveys]    = React.useState(null); // null = loading, [] = none
+    const [surveys, setSurveys] = React.useState(null); // null = loading, [] = none
     const API = import.meta.env.VITE_API_URL || 'https://iot-monitoring-app-5xoi.onrender.com';
 
     // Fetch survey history once user is available
     React.useEffect(() => {
         if (!user) { setSurveys([]); return; }
+        let cancelled = false;
+
+        // Safety: if fetch hangs, fall back to empty after 6s
+        const timer = setTimeout(() => {
+            if (!cancelled) setSurveys(prev => prev === null ? [] : prev);
+        }, 6000);
+
         (async () => {
             try {
-                const { createClient } = await import('@supabase/supabase-js');
-                const sb = createClient(
-                    import.meta.env.VITE_SUPABASE_URL,
-                    import.meta.env.VITE_SUPABASE_ANON_KEY
-                );
-                const { data: { session } } = await sb.auth.getSession();
+                const { supabase } = await import('./lib/supabase');
+                const { data: { session } } = await supabase.auth.getSession();
                 const token = session?.access_token;
-                if (!token) { setSurveys([]); return; }
+                if (!token || cancelled) { if (!cancelled) setSurveys([]); return; }
+
                 const res = await fetch(`${API}/api/survey/history`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
+                if (cancelled) return;
                 if (!res.ok) { setSurveys([]); return; }
-                setSurveys(await res.json());
-            } catch { setSurveys([]); }
+                const json = await res.json();
+                setSurveys(Array.isArray(json) ? json : []);
+            } catch {
+                if (!cancelled) setSurveys([]);
+            }
         })();
+        return () => { cancelled = true; clearTimeout(timer); };
     }, [user]);
 
     // Build chart data: only mark comfort at timestamps NEAR a real survey (within 2h)
     const TWO_HOURS = 2 * 60 * 60 * 1000;
     const data = useMemo(() => {
         if (!surveys?.length || !history?.length) return [];
-        const energySlice = [...history].reverse().slice(-20); // oldest→newest
+        const energySlice = [...history].reverse().slice(-20);
         return energySlice.map((r, i) => {
-            // Try to parse the actual timestamp from the row
             const rowTs = r.rawTs
                 ? new Date(r.rawTs).getTime()
-                : Date.now() - (energySlice.length - i) * 30000; // fallback estimate
-
-            // Only show comfort dot if a survey was done within 2 hours of this point
+                : Date.now() - (energySlice.length - i) * 30000;
             const nearby = surveys.find(s => {
                 const diff = Math.abs(new Date(s.submitted_at).getTime() - rowTs);
                 return diff <= TWO_HOURS;
             });
-
             return {
                 t: r.time || `${i}`,
-                comfort: nearby != null ? nearby.comfort_level : null,  // 0, 1, 2, or 3 only
+                comfort: nearby != null ? nearby.comfort_level : null,
                 energy:  Number(r.energy?.value ?? 0),
             };
         });
@@ -427,7 +429,7 @@ function ComboChart({ history, user }) {
         return (
             <div className="combo-chart-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 120 }}>
                 <span style={{ fontSize: 28 }}>🌡️</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Comfort vs Energy chart</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Comfort vs Energy</span>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', maxWidth: 280 }}>
                     Complete a <strong style={{ color: 'var(--teal)' }}>Comfort Survey</strong> to see how your thermal comfort correlates with energy usage.
                 </span>
@@ -435,11 +437,13 @@ function ComboChart({ history, user }) {
         );
     }
 
-    // Loading state
+    // Loading state (with 5s timeout fallback to empty)
     if (surveys === null) {
         return (
-            <div className="combo-chart-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Loading chart data…</span>
+            <div className="combo-chart-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 120 }}>
+                <span style={{ fontSize: 28 }}>🌡️</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Comfort vs Energy</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Loading survey data…</span>
             </div>
         );
     }
@@ -449,7 +453,7 @@ function ComboChart({ history, user }) {
             <div className="combo-header">
                 <span className="chart-title" style={{ marginBottom: 0 }}>Comfort vs Energy Utilization</span>
                 <div className="chart-legend">
-                    <div className="legend-item"><div className="legend-line" style={{ background: 'var(--teal)' }} /><span>Comfort Score</span></div>
+                    <div className="legend-item"><div className="legend-line" style={{ background: 'var(--teal)' }} /><span>Comfort (0–3)</span></div>
                     <div className="legend-item"><div className="legend-line" style={{ background: 'var(--amber)' }} /><span>Energy (kWh)</span></div>
                 </div>
             </div>
