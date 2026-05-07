@@ -397,23 +397,26 @@ function ComboChart({ history, user }) {
         })();
     }, [user]);
 
-    // Build chart data: overlay survey comfort points onto energy timeline
+    // Build chart data: only mark comfort at timestamps NEAR a real survey (within 2h)
+    const TWO_HOURS = 2 * 60 * 60 * 1000;
     const data = useMemo(() => {
         if (!surveys?.length || !history?.length) return [];
-        // Map comfort_level (0-3) to a 0-100 score for display
-        const levelToScore = { 0: 10, 1: 40, 2: 70, 3: 95 };
-        // Take last 12 energy rows
-        const energySlice = history.slice(-12);
+        const energySlice = [...history].reverse().slice(-20); // oldest→newest
         return energySlice.map((r, i) => {
-            const rowTs = new Date(r.rawTimestamp || Date.now()).getTime();
-            // Find closest survey to this energy row
-            const closest = surveys.reduce((best, s) => {
+            // Try to parse the actual timestamp from the row
+            const rowTs = r.rawTs
+                ? new Date(r.rawTs).getTime()
+                : Date.now() - (energySlice.length - i) * 30000; // fallback estimate
+
+            // Only show comfort dot if a survey was done within 2 hours of this point
+            const nearby = surveys.find(s => {
                 const diff = Math.abs(new Date(s.submitted_at).getTime() - rowTs);
-                return (!best || diff < best.diff) ? { s, diff } : best;
-            }, null);
+                return diff <= TWO_HOURS;
+            });
+
             return {
                 t: r.time || `${i}`,
-                comfort: closest ? levelToScore[closest.s.comfort_level] ?? 50 : null,
+                comfort: nearby != null ? nearby.comfort_level : null,  // 0, 1, 2, or 3 only
                 energy:  Number(r.energy?.value ?? 0),
             };
         });
@@ -619,6 +622,7 @@ export default function App() {
                     const src = closestAqi || indoorFallback;
                     return {
                         time: new Date(r.timestamp).toLocaleTimeString(),
+                        rawTs: r.timestamp,
                         temperature: { value: src?.temperature ?? '--' },
                         humidity:    { value: src?.humidity    ?? '--' },
                         co2:         { value: src?.co2         ?? '--' },
