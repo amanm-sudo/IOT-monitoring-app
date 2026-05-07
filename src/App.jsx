@@ -294,60 +294,39 @@ function ConsumptionChart({ dailyEnergy }) {
     );
 }
 
-/* ─── Live Comfort Gauge ─── */
-function ComfortGauge({ score }) {
-    const s = score != null ? Math.min(Math.max(score, 0), 100) : 50;
-    const angle = -90 + (s / 100) * 180; // -90 to 90 degrees
-    const rad = (angle * Math.PI) / 180;
-    const cx = 90, cy = 80, r = 60;
-    const nx = cx + r * Math.cos(rad);
-    const ny = cy + r * Math.sin(rad);
 
-    // Comfort label
-    const pmv = ((s - 50) / 50 * 1.5).toFixed(1);
-    const pmvLabel = s < 35 ? 'Cool' : s < 45 ? 'Slightly Cool' : s < 55 ? 'Neutral' : s < 65 ? 'Slightly Warm' : 'Warm';
+/* ─── Power Quality Card ─── */
+function PowerQualityCard({ data }) {
+    const voltage = data?.voltage?.value ?? '--';
+    const current = data?.current?.value ?? '--';
+    const power   = (voltage !== '--' && current !== '--')
+        ? (Number(voltage) * Number(current)).toFixed(0)
+        : '--';
+    const pf = 0.92; // typical building power factor
+
+    const metrics = [
+        { label: 'Line Voltage',    value: voltage !== '--' ? `${Number(voltage).toFixed(1)}` : '--', unit: 'V',  status: 'optimal' },
+        { label: 'Load Current',    value: current !== '--' ? `${Number(current).toFixed(2)}` : '--', unit: 'A',  status: 'optimal' },
+        { label: 'Active Power',    value: power,   unit: 'W',  status: Number(power) > 1500 ? 'elevated' : 'optimal' },
+        { label: 'Power Factor',    value: pf,      unit: '',   status: 'optimal' },
+    ];
 
     return (
-        <div className="gauge-card">
-            <div className="chart-title">Live Comfort Gauge</div>
-            <div className="gauge-svg-wrap">
-                <svg width="180" height="110" viewBox="0 0 180 110">
-                    <defs>
-                        <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="#6b7fad" />
-                            <stop offset="40%" stopColor="#2dd4bf" />
-                            <stop offset="70%" stopColor="#fbbf24" />
-                            <stop offset="100%" stopColor="#f87171" />
-                        </linearGradient>
-                    </defs>
-                    {/* Background arc */}
-                    <path d="M 20 80 A 70 70 0 0 1 160 80" fill="none" stroke="rgba(128,128,128,0.15)" strokeWidth="14" strokeLinecap="round" />
-                    {/* Colored arc */}
-                    <path d="M 20 80 A 70 70 0 0 1 160 80" fill="none" stroke="url(#gaugeGrad)" strokeWidth="14" strokeLinecap="round" opacity="0.7" />
-                    {/* Needle */}
-                    <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="var(--text-primary)" strokeWidth="2" strokeLinecap="round" />
-                    <circle cx={cx} cy={cy} r="5" fill="var(--text-primary)" />
-                </svg>
-            </div>
-            <div className="gauge-value-big">{pmv >= 0 ? '+' : ''}{pmv} — {pmvLabel}</div>
-        </div>
-    );
-}
-
-/* ─── Optimization Recommendation ─── */
-function OptimizationCard({ predictions }) {
-    const saving = predictions?.energy ? (predictions.energy[0] * 0.34).toFixed(0) : '34';
-    return (
-        <div className="optim-card">
-            <div className="chart-title">Optimization Recommendation</div>
-            <div className="optim-headline">
-                Reduce HVAC setpoint by 1°C to optimize building energy baseline.
-            </div>
-            <div className="optim-tags">
-                <span className="optim-tag tag-saving">+{saving}$ Saving</span>
-                <span className="optim-tag tag-comfort">0.2 Comfort Impact</span>
-            </div>
-            <div className="optim-cta">Apply suggestion <ArrowRight size={13} /></div>
+        <div className="env-card">
+            <div className="chart-title" style={{ marginBottom: 4 }}>Power Quality</div>
+            {metrics.map(m => (
+                <div className="env-row" key={m.label}>
+                    <div className="env-meta">
+                        <span className="env-name">{m.label}</span>
+                        <span className={`env-status ${m.status}`}>
+                            {m.status === 'elevated' ? 'High' : 'Normal'}
+                        </span>
+                    </div>
+                    <div className="env-reading">
+                        {m.value} <span className="env-unit">{m.unit}</span>
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }
@@ -715,11 +694,10 @@ export default function App() {
                     <ConsumptionChart dailyEnergy={dailyEnergy} />
                 </div>
 
-                {/* Row 4: Gauge + Optimization + Env */}
-                <div className="mid-row">
-                    <ComfortGauge score={anomalies?.score} />
-                    <OptimizationCard predictions={predictions} />
+                {/* Row 4: Env Breakdown + Power Quality */}
+                <div className="mid-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
                     <EnvBreakdown data={displayData} aqiData={aqiData} />
+                    <PowerQualityCard data={displayData} />
                 </div>
 
                 {/* Row 5: Combo Chart */}

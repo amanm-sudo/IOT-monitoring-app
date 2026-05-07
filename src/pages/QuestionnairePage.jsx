@@ -205,9 +205,6 @@ function ComfortResult({ result, onRedo }) {
           <span>{result.action}</span>
         </div>
 
-        {result.note && (
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>{result.note}</p>
-        )}
 
         {isExtreme && (
           <p className="result-email-note">📧 An HVAC alert email has been sent to your inbox.</p>
